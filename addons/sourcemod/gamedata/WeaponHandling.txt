@@ -1,0 +1,124 @@
+"Games"
+{
+    "left4dead2"
+    {
+		"Offsets"
+		{
+			"CTerrorWeapon::GetReloadDurationModifier"
+			{
+				"windows"	"357"
+				"linux"		"358"
+			}
+			"CTerrorGun::GetRateOfFire"
+			{
+				"windows"	"451"
+				"linux"		"453"
+			}
+			"CBaseBeltItem::GetUseTimerDuration"
+			{
+				"windows"	"447"
+				"linux"		"449"
+			}
+			"CTerrorWeapon::GetDeployDurationModifier"
+			{
+				"windows"	"358"
+				"linux"		"359"
+			}
+			"CTerrorWeapon::Deploy"
+			{
+				"windows"	"263"
+				"linux"		"264"
+			}
+			"CBaseCSGrenade::PrimaryAttack"
+			{
+				"windows"	"281"
+				"linux"		"282"
+			}
+			"CBaseCSGrenade::StartGrenadeThrow"
+			{
+				"windows"	"447"
+				"linux"		"449"
+			}
+			"CTerrorGun::GetRateOfFire_patch"
+			{
+				"windows"	"14" //0x74 -> 0xEB
+				"linux"		"20" //0x74 -> 0xEB
+			}
+			"CPistol::GetRateOfFire_patch"
+			{
+				"windows"	"17" //0x74 -> 0xEB
+				"linux"		"23" //0x74 -> 0xEB
+			}
+		}
+		"Addresses"
+		{
+			"CTerrorGun::GetRateOfFire"
+			{
+				"windows"
+				{
+					"signature"	"CTerrorGun::GetRateOfFire"			
+				}
+				"linux"
+				{
+					"signature"	"CTerrorGun::GetRateOfFire"
+				}
+			}
+			"CPistol::GetRateOfFire"
+			{
+				"windows"
+				{
+					"signature"	"CPistol::GetRateOfFire"			
+				}
+				"linux"
+				{
+					"signature"	"CPistol::GetRateOfFire"
+				}
+			}
+		}
+		"Functions"
+		{
+			"CTerrorMeleeWeapon::StartMeleeSwing"
+			{
+				"signature"  "CTerrorMeleeWeapon::StartMeleeSwing"
+				"callconv"  "thiscall"
+				"return"  "int"
+				"this"  "entity"
+				"arguments"
+				{
+					"Player"
+					{
+						"type"    "cbaseentity"
+					}
+					"IsPrimanyAttack"
+					{
+						"type"    "bool"
+					}
+				}
+			}
+		}
+		"Signatures"
+		{
+			"CTerrorGun::GetRateOfFire"
+			{
+				"library"		"server"
+				"linux"			"@_ZNK10CTerrorGun13GetRateOfFireEv"
+				"windows"		"\x55\x8B\xEC\x51\x56\x8B\xF1\xE8\x2A\x2A\x2A\x2A\x85\xC0\x74\x2A\x8B\x10"
+								/* 55 8B EC 51 56 8B F1 E8 ? ? ? ? 85 C0 74 ? 8B 10 */
+			}
+			"CPistol::GetRateOfFire"
+			{
+				"library"		"server"
+				"linux"			"@_ZNK7CPistol13GetRateOfFireEv"
+				"windows"		"\x56\x8B\xF1\x8B\x06\x8B\x90\x6C\x06\x00\x00\xFF\xD2\x8B\xCE\x84\xC0\x74\x2A\xE8\x2A\x2A\x2A\x2A\x85\xC0"
+								/* 56 8B F1 8B 06 8B 90 6C 06 00 00 FF D2 8B CE 84 C0 74 ? E8 ? ? ? ? 85 C0 */
+			}
+			"CTerrorMeleeWeapon::StartMeleeSwing"
+			{
+				"library"		"server"
+				"linux"			"@_ZN18CTerrorMeleeWeapon15StartMeleeSwingEP13CTerrorPlayerb"
+				"windows"		"\x55\x8B\xEC\x53\x56\x8B\xF1\x8B\x86\xDC\x17\x00\x00"
+								/* 55 8B EC 53 56 8B F1 8B 86 DC 17 00 00 */
+			}
+		}
+    }
+}
