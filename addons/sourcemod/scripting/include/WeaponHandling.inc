@@ -3,6 +3,11 @@
 #endif
 #define _WeaponHandling_included
 
+/*
+*	A typical example of stacking modifiers from different plugins is ->	speedmodifier = speedmodifier * yourmodifier
+*	Example to overwrite modifers placed before ->							speedmodifier = yourmodifier
+*/
+
 enum L4D2WeaponType 
 {
 	L4D2WeaponType_Unknown = 0,

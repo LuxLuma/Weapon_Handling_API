@@ -121,4 +121,92 @@
 			}
 		}
     }
+	"left4dead"
+    {
+		"Offsets"
+		{
+			"CTerrorWeapon::GetReloadDurationModifier"
+			{
+				"windows"	"333"
+				"linux"		"334"
+			}
+			"CTerrorGun::GetRateOfFire"
+			{
+				"windows"	"410"
+				"linux"		"411"
+			}
+			"CTerrorWeapon::GetDeployDurationModifier"
+			{
+				"windows"	"334"
+				"linux"		"335"
+			}
+			"CTerrorWeapon::Deploy"
+			{
+				"windows"	"244"
+				"linux"		"245"
+			}
+			"CBaseCSGrenade::PrimaryAttack"
+			{
+				"windows"	"261"
+				"linux"		"262"
+			}
+			"CBaseCSGrenade::StartGrenadeThrow"
+			{
+				"windows"	"407"
+				"linux"		"408"
+			}
+			"CTerrorGun::GetRateOfFire_patch"
+			{
+				"windows"	"10" //0x74 -> 0xEB
+				"linux"		"30" //0x74 -> 0xEB
+			}
+			"CPistol::GetRateOfFire_patch"
+			{
+				"windows"	"17" //0x74 -> 0xEB
+				"linux"		"36" //0x74 -> 0xEB
+			}
+		}
+		"Addresses"
+		{
+			"CTerrorGun::GetRateOfFire"
+			{
+				"windows"
+				{
+					"signature"	"CTerrorGun::GetRateOfFire"			
+				}
+				"linux"
+				{
+					"signature"	"CTerrorGun::GetRateOfFire"
+				}
+			}
+			"CPistol::GetRateOfFire"
+			{
+				"windows"
+				{
+					"signature"	"CPistol::GetRateOfFire"			
+				}
+				"linux"
+				{
+					"signature"	"CPistol::GetRateOfFire"
+				}
+			}
+		}
+		"Signatures"
+		{
+			"CTerrorGun::GetRateOfFire"
+			{
+				"library"		"server"
+				"linux"			"@_ZNK10CTerrorGun13GetRateOfFireEv"
+				"windows"		"\x56\x8B\xF1\xE8\x2A\x2A\x2A\x2A\x85\xC0\x74\x2A\x8B\x10\x8B\xC8\x8B\x82\x7C\x07\x00\x00\xFF\xD0\x84\xC0\x74"
+								/* 56 8B F1 E8 ? ? ? ? 85 C0 74 ? 8B 10 8B C8 8B 82 7C 07 00 00 FF D0 84 C0 74 */
+			}
+			"CPistol::GetRateOfFire"
+			{
+				"library"		"server"
+				"linux"			"@_ZNK7CPistol13GetRateOfFireEv"
+				"windows"		"\x56\x8B\xF1\x8B\x06\x8B\x90\xF4\x05\x00\x00\xFF\xD2\x84\xC0\x8B\xCE\x74\x2A\xE8\x2A\x2A\x2A\x2A\x85\xC0\x74\x2A"
+								/* 56 8B F1 8B 06 8B 90 F4 05 00 00 FF D2 84 C0 8B CE 74 ? E8 ? ? ? ? 85 C0 74 */
+			}
+		}
+    }
 }

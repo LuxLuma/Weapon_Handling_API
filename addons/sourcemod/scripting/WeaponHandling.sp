@@ -18,6 +18,7 @@
 
 
 //dual pistol shots have been lowered from 13.3~ shots per sec to 11.5~ shots per sec inline with double shoot speed of single pistol
+//These forwards are likely not safe to do much to clients in like change their weapons ect.
 
 #include <sourcemod>
 #include <sdkhooks>
@@ -164,7 +165,7 @@ public void OnPluginStart()
 	hCvar_UseIncapCycle = CreateConVar("wh_use_incap_cycle_cvar", "1", "1 = (use \"survivor_incapacitated_cycle_time\" for incap shooting cycle rate) 0 = (ignores the cvar and uses weapon_*.txt cycle rates) before being modified", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	hCvar_UseIncapReloadCycle = CreateConVar("wh_use_incap_reload_cycle_cvar", "1", "1 = (use \"survivor_incapacitated_reload_multiplier\" for incap reloading cycle rate) 0 = (ignores the cvar and uses default reload cycle rates) before being modified", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	
-	hCvar_CorrectDeploySpeed = CreateConVar("wh_deploy_animation_speed", "1", "1 = (match deploy speed animation to the \"DeployDuration\" keyvalue in weapon_*.txt) 0 = (ignore's \"DeployDuration\"keyvalue in weapon_*.txt and matches deploy speed to animation speed) before being modified", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+	hCvar_CorrectDeploySpeed = CreateConVar("wh_deploy_animation_speed", "1", "1 = (match deploy animation speed to the \"DeployDuration\" keyvalue in weapon_*.txt) 0 = (ignore's \"DeployDuration\"keyvalue in weapon_*.txt and matches deploy speed to animation speed) before being modified", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	
 	hCvar_IncapCycle = FindConVar("survivor_incapacitated_cycle_time");
 	if(hCvar_IncapCycle == null)
