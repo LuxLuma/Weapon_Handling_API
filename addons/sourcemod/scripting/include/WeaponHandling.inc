@@ -111,8 +111,8 @@ forward void WH_OnReloadModifier(int client, int weapon, L4D2WeaponType weaponty
 forward void WH_OnGetRateOfFire(int client, int weapon, L4D2WeaponType weapontype, float &speedmodifier);
 
 /*
-*	Does not trigger for chainsaw, gascan, propane, oxygentank, fireworks, gnome
-*	Affects pills/adrenaline use speed
+*	Does not trigger for chainsaw, gascan, propane, oxygentank, fireworks and gnome.
+*	L4D2 only Affects pills/adrenaline use speed.
 *	
 *	@Param	client			Client Index
 *	@Param	weapon			Weapon Index

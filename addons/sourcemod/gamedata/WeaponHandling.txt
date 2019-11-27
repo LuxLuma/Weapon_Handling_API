@@ -135,6 +135,11 @@
 				"windows"	"410"
 				"linux"		"411"
 			}
+			"CPainPills::SendWeaponAnim"
+			{
+				"windows"	"231"
+				"linux"		"232"
+			}
 			"CTerrorWeapon::GetDeployDurationModifier"
 			{
 				"windows"	"334"

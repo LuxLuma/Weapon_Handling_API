@@ -32,7 +32,7 @@
 
 #define GAMEDATA "WeaponHandling"
 
-#define PLUGIN_VERSION "0.95"
+#define PLUGIN_VERSION "1.0"
 
 enum L4D2WeaponType 
 {
@@ -103,19 +103,14 @@ Handle g_hOnDeployModifier;
 
 static ConVar hCvar_DoublePistolCycle;
 static ConVar hCvar_UseIncapCycle;
-static ConVar hCvar_UseIncapReloadCycle;
 static ConVar hCvar_CorrectDeploySpeed;
 
 static bool g_bDoublePistolCycle;
 static bool g_bUseIncapCycle;
-static bool g_bUseIncapReloadCycle;
 static bool g_bCorrectDeploySpeed;
 
 static ConVar hCvar_IncapCycle;
 static float g_fIncapCycle = 0.3;
-
-static ConVar hCvar_IncapReloadCycle;
-static float g_fIncapReloadCycle = 1.25;
 
 enum MeleeSwingInfo
 {
@@ -126,12 +121,22 @@ enum MeleeSwingInfo
 
 static int g_iMeleeTempVals[3];
 
+bool g_bIsL4D2;
+
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 {
 	EngineVersion iEngineVersion = GetEngineVersion();
-	if(iEngineVersion != Engine_Left4Dead2)
+	if(iEngineVersion == Engine_Left4Dead2)
 	{
-		strcopy(error, err_max, "Plugin only supports Left 4 Dead 2");
+		g_bIsL4D2 = true;
+	}
+	else if(iEngineVersion == Engine_Left4Dead)
+	{
+		g_bIsL4D2 = false;
+	}
+	else
+	{
+		strcopy(error, err_max, "Plugin only supports Left 4 Dead 1/2");
 		return APLRes_SilentFailure;
 	}
 	
@@ -163,7 +168,6 @@ public void OnPluginStart()
 	hCvar_DoublePistolCycle = CreateConVar("wh_double_pistol_cycle_rate", "0", "1 = (double pistol shoot at double speed of a single pistol 2~ shots persec slower than vanilla) 0 = (keeps vanilla cycle rate of 0.075) before being modified", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	
 	hCvar_UseIncapCycle = CreateConVar("wh_use_incap_cycle_cvar", "1", "1 = (use \"survivor_incapacitated_cycle_time\" for incap shooting cycle rate) 0 = (ignores the cvar and uses weapon_*.txt cycle rates) before being modified", FCVAR_NOTIFY, true, 0.0, true, 1.0);
-	hCvar_UseIncapReloadCycle = CreateConVar("wh_use_incap_reload_cycle_cvar", "1", "1 = (use \"survivor_incapacitated_reload_multiplier\" for incap reloading cycle rate) 0 = (ignores the cvar and uses default reload cycle rates) before being modified", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	
 	hCvar_CorrectDeploySpeed = CreateConVar("wh_deploy_animation_speed", "1", "1 = (match deploy animation speed to the \"DeployDuration\" keyvalue in weapon_*.txt) 0 = (ignore's \"DeployDuration\"keyvalue in weapon_*.txt and matches deploy speed to animation speed) before being modified", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	
@@ -177,19 +181,8 @@ public void OnPluginStart()
 		hCvar_IncapCycle.AddChangeHook(eConvarChanged);
 	}
 	
-	hCvar_IncapReloadCycle = FindConVar("survivor_incapacitated_reload_multiplier");
-	if(hCvar_IncapReloadCycle == null)
-	{
-		LogError("Unable to find \"survivor_incapacitated_reload_multiplier\" cvar, assuming \"wh_use_incap_reload_cycle_cvar\" is false");
-	}
-	else
-	{
-		hCvar_IncapReloadCycle.AddChangeHook(eConvarChanged);
-	}
-	
 	hCvar_DoublePistolCycle.AddChangeHook(eConvarChanged);
 	hCvar_UseIncapCycle.AddChangeHook(eConvarChanged);
-	hCvar_UseIncapReloadCycle.AddChangeHook(eConvarChanged);
 	hCvar_CorrectDeploySpeed.AddChangeHook(eConvarChanged);
 	
 	CvarsChanged();
@@ -205,7 +198,6 @@ void CvarsChanged()
 {
 	g_bDoublePistolCycle = hCvar_DoublePistolCycle.IntValue > 0;
 	g_bUseIncapCycle = hCvar_UseIncapCycle.IntValue > 0;
-	g_bUseIncapReloadCycle = hCvar_UseIncapReloadCycle.IntValue > 0;
 	g_bCorrectDeploySpeed = hCvar_CorrectDeploySpeed.IntValue > 0;
 	
 	if(hCvar_IncapCycle != null)
@@ -216,17 +208,6 @@ void CvarsChanged()
 	{
 		g_bUseIncapCycle = false;
 	}
-	
-	if(hCvar_IncapReloadCycle != null)
-	{
-		g_fIncapReloadCycle = hCvar_IncapReloadCycle.FloatValue;
-	}
-	else
-	{
-		g_bUseIncapReloadCycle = false;
-	}
-	
-	
 }
 
 public MRESReturn OnMeleeSwingPre(int pThis, Handle hReturn, Handle hParams)
@@ -358,11 +339,6 @@ public MRESReturn OnReloadModifier(int pThis, Handle hReturn)
 	ClampFloatAboveZero(fSpeed);
 	
 	float fReloadSpeed = DHookGetReturn(hReturn);
-	
-	if(g_bUseIncapReloadCycle && GetEntProp(iClient, Prop_Send, "m_isIncapacitated", 1))
-	{
-		fReloadSpeed = g_fIncapReloadCycle;
-	}
 	
 	fReloadSpeed = ClampFloatAboveZero(fReloadSpeed / fSpeed);
 	
@@ -574,11 +550,15 @@ void LoadHooksAndPatches()
 	
 	hRateOfFire = DHookCreate(iOffset, HookType_Entity, ReturnType_Float, ThisPointer_CBaseEntity, OnGetRateOfFire);
 	
-	iOffset = GameConfGetOffset(hGamedata, "CBaseBeltItem::GetUseTimerDuration");
-	if(iOffset == -1)
-		SetFailState("Unable to get offset for 'CBaseBeltItem::GetUseTimerDuration'");
 	
-	hItemUseDuration = DHookCreate(iOffset, HookType_Entity, ReturnType_Float, ThisPointer_CBaseEntity, OnGetRateOfFire);
+	if(g_bIsL4D2)
+	{
+		iOffset = GameConfGetOffset(hGamedata, "CBaseBeltItem::GetUseTimerDuration");
+		if(iOffset == -1)
+			SetFailState("Unable to get offset for 'CBaseBeltItem::GetUseTimerDuration'");
+		
+		hItemUseDuration = DHookCreate(iOffset, HookType_Entity, ReturnType_Float, ThisPointer_CBaseEntity, OnGetRateOfFire);
+	}
 	
 	iOffset = GameConfGetOffset(hGamedata, "CTerrorWeapon::GetDeployDurationModifier");
 	if(iOffset == -1)
@@ -604,16 +584,19 @@ void LoadHooksAndPatches()
 	
 	hStartThrow = DHookCreate(iOffset, HookType_Entity, ReturnType_Edict, ThisPointer_CBaseEntity, OnStartThrow);
 	
-	Handle hDetour;
-	hDetour = DHookCreateFromConf(hGamedata, "CTerrorMeleeWeapon::StartMeleeSwing");
-	if(!hDetour)
-		SetFailState("Failed to find 'CTerrorMeleeWeapon::StartMeleeSwing' signature");
-	
-	if(!DHookEnableDetour(hDetour, false, OnMeleeSwingPre))
-		SetFailState("Failed to detour 'CTerrorMeleeWeapon::StartMeleeSwing'");
-	
-	if(!DHookEnableDetour(hDetour, true, OnMeleeSwingpPost))
-		SetFailState("Failed to detour 'CTerrorMeleeWeapon::StartMeleeSwing'");
+	if(g_bIsL4D2)
+	{
+		Handle hDetour;
+		hDetour = DHookCreateFromConf(hGamedata, "CTerrorMeleeWeapon::StartMeleeSwing");
+		if(!hDetour)
+			SetFailState("Failed to find 'CTerrorMeleeWeapon::StartMeleeSwing' signature");
+		
+		if(!DHookEnableDetour(hDetour, false, OnMeleeSwingPre))
+			SetFailState("Failed to detour 'CTerrorMeleeWeapon::StartMeleeSwing'");
+		
+		if(!DHookEnableDetour(hDetour, true, OnMeleeSwingpPost))
+			SetFailState("Failed to detour 'CTerrorMeleeWeapon::StartMeleeSwing'");
+	}
 	
 	
 	Address patch = GameConfGetAddress(hGamedata, "CTerrorGun::GetRateOfFire");
