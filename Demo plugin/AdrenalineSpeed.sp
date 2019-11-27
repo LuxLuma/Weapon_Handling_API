@@ -122,7 +122,7 @@ void CvarsChanged()
 
 public void WH_OnMeleeSwing(int client, int weapon, float &speedmodifier)
 {
-	speedmodifier = PillsOrAdrenModifier(client, speedmodifier);
+	speedmodifier = PillsOrAdrenModifier(client, speedmodifier); //send speedmodifier to be modified
 }
 
 public void WH_OnStartThrow(int client, int weapon, L4D2WeaponType weapontype, float &speedmodifier)
@@ -165,7 +165,7 @@ float PillsOrAdrenModifier(int iClient, float speedmodifier)
 {
 	if(g_fAdrenalineUseTime[iClient] > GetGameTime()) 
 	{
-		speedmodifier = speedmodifier * g_fAdrenSpeedUp;// multiply current modifier
+		speedmodifier = speedmodifier * g_fAdrenSpeedUp;// multiply current modifier to not overwrite any existing modifiers already
 	}
 	else if(g_fPillsUseTime[iClient] > GetGameTime()) 
 	{
