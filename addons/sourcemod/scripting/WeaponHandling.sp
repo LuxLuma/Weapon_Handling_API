@@ -165,6 +165,8 @@ public void OnPluginStart()
 {
 	LoadHooksAndPatches();
 	
+	CreateConVar("weaponhandling_version", PLUGIN_VERSION, "", FCVAR_DONTRECORD|FCVAR_NOTIFY);
+	
 	hCvar_DoublePistolCycle = CreateConVar("wh_double_pistol_cycle_rate", "0", "1 = (double pistol shoot at double speed of a single pistol 2~ shots persec slower than vanilla) 0 = (keeps vanilla cycle rate of 0.075) before being modified", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	
 	hCvar_UseIncapCycle = CreateConVar("wh_use_incap_cycle_cvar", "1", "1 = (use \"survivor_incapacitated_cycle_time\" for incap shooting cycle rate) 0 = (ignores the cvar and uses weapon_*.txt cycle rates) before being modified", FCVAR_NOTIFY, true, 0.0, true, 1.0);
