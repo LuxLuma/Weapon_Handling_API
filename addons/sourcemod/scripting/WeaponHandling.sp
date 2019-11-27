@@ -31,7 +31,7 @@
 
 #define GAMEDATA "WeaponHandling"
 
-#define PLUGIN_VERSION "0.92"
+#define PLUGIN_VERSION "0.95"
 
 enum L4D2WeaponType 
 {
@@ -100,6 +100,22 @@ Handle g_hOnReloadModifier;
 Handle g_hOnGetRateOfFire;
 Handle g_hOnDeployModifier;
 
+static ConVar hCvar_DoublePistolCycle;
+static ConVar hCvar_UseIncapCycle;
+static ConVar hCvar_UseIncapReloadCycle;
+static ConVar hCvar_CorrectDeploySpeed;
+
+static bool g_bDoublePistolCycle;
+static bool g_bUseIncapCycle;
+static bool g_bUseIncapReloadCycle;
+static bool g_bCorrectDeploySpeed;
+
+static ConVar hCvar_IncapCycle;
+static float g_fIncapCycle = 0.3;
+
+static ConVar hCvar_IncapReloadCycle;
+static float g_fIncapReloadCycle = 1.25;
+
 enum MeleeSwingInfo
 {
 	MeleeSwingInfo_Entity = 0,
@@ -141,119 +157,75 @@ public Plugin myinfo =
 
 public void OnPluginStart()
 {
-	Handle hGamedata = LoadGameConfigFile(GAMEDATA);
-	if(hGamedata == null) 
-		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
+	LoadHooksAndPatches();
 	
-	Address patch = GameConfGetAddress(hGamedata, "CTerrorGun::GetRateOfFire");
-	if(patch)
+	hCvar_DoublePistolCycle = CreateConVar("wh_double_pistol_cycle_rate", "0", "1 = (double pistol shoot at double speed of a single pistol 2~ shots persec slower than vanilla) 0 = (keeps vanilla cycle rate of 0.075) before being modified", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+	
+	hCvar_UseIncapCycle = CreateConVar("wh_use_incap_cycle_cvar", "1", "1 = (use \"survivor_incapacitated_cycle_time\" for incap shooting cycle rate) 0 = (ignores the cvar and uses weapon_*.txt cycle rates) before being modified", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+	hCvar_UseIncapReloadCycle = CreateConVar("wh_use_incap_reload_cycle_cvar", "1", "1 = (use \"survivor_incapacitated_reload_multiplier\" for incap reloading cycle rate) 0 = (ignores the cvar and uses default reload cycle rates) before being modified", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+	
+	hCvar_CorrectDeploySpeed = CreateConVar("wh_deploy_animation_speed", "1", "1 = (match deploy speed animation to the \"DeployDuration\" keyvalue in weapon_*.txt) 0 = (ignore's \"DeployDuration\"keyvalue in weapon_*.txt and matches deploy speed to animation speed) before being modified", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+	
+	hCvar_IncapCycle = FindConVar("survivor_incapacitated_cycle_time");
+	if(hCvar_IncapCycle == null)
 	{
-		int offset = GameConfGetOffset(hGamedata, "CTerrorGun::GetRateOfFire_patch");
-		if(offset != -1) 
-		{
-			if(LoadFromAddress(patch + view_as<Address>(offset), NumberType_Int8) == 0x74)
-			{
-				CTerrorGun__GetRateOfFire_byte_address = patch + view_as<Address>(offset);
-				StoreToAddress(CTerrorGun__GetRateOfFire_byte_address, 0xEB, NumberType_Int8);
-				PrintToServer("CTerrorGun::GetRateOfFire Incap cycle rate patched");
-			}
-			else
-			{
-				LogError("Incorrect offset for 'CTerrorGun::GetRateOfFire_patch'.");
-			}
-		}
-		else
-		{
-			LogError("Invalid offset for 'CTerrorGun::GetRateOfFire_patch'.");
-		}
+		LogError("Unable to find \"survivor_incapacitated_cycle_time\" cvar, assuming \"wh_use_incap_cycle_cvar\" is false");
 	}
 	else
 	{
-		LogError("Error finding the 'CTerrorGun::GetRateOfFire' signature.'");
+		hCvar_IncapCycle.AddChangeHook(eConvarChanged);
 	}
 	
-	patch = GameConfGetAddress(hGamedata, "CPistol::GetRateOfFire");
-	if(patch)
+	hCvar_IncapReloadCycle = FindConVar("survivor_incapacitated_reload_multiplier");
+	if(hCvar_IncapReloadCycle == null)
 	{
-		int offset = GameConfGetOffset(hGamedata, "CPistol::GetRateOfFire_patch");
-		if(offset != -1) 
-		{
-			if(LoadFromAddress(patch + view_as<Address>(offset), NumberType_Int8) == 0x74)
-			{
-				CPistol__GetRateOfFire_byte_address = patch + view_as<Address>(offset);
-				StoreToAddress(CPistol__GetRateOfFire_byte_address, 0xEB, NumberType_Int8);
-				PrintToServer("CPistol::GetRateOfFire Incap cycle rate patched");
-			}
-			else
-			{
-				LogError("Incorrect offset for 'CPistol::GetRateOfFire_patch'.");
-			}
-		}
-		else
-		{
-			LogError("Invalid offset for 'CPistol::GetRateOfFire_patch'.");
-		}
+		LogError("Unable to find \"survivor_incapacitated_reload_multiplier\" cvar, assuming \"wh_use_incap_reload_cycle_cvar\" is false");
 	}
 	else
 	{
-		LogError("Error finding the 'CPistol::GetRateOfFire' signature.'");
+		hCvar_IncapReloadCycle.AddChangeHook(eConvarChanged);
 	}
 	
-	int iOffset;
-	iOffset = GameConfGetOffset(hGamedata, "CTerrorWeapon::GetReloadDurationModifier");
-	if(iOffset == -1)
-		SetFailState("Unable to get offset for 'CTerrorPlayer::GetReloadDurationModifier'");
+	hCvar_DoublePistolCycle.AddChangeHook(eConvarChanged);
+	hCvar_UseIncapCycle.AddChangeHook(eConvarChanged);
+	hCvar_UseIncapReloadCycle.AddChangeHook(eConvarChanged);
+	hCvar_CorrectDeploySpeed.AddChangeHook(eConvarChanged);
 	
-	hReloadModifier = DHookCreate(iOffset, HookType_Entity, ReturnType_Float, ThisPointer_CBaseEntity, OnReloadModifier);
+	CvarsChanged();
+	AutoExecConfig(true, "WeaponHandling");
+}
+
+public void eConvarChanged(Handle hCvar, const char[] sOldVal, const char[] sNewVal)
+{
+	CvarsChanged();
+}
+
+void CvarsChanged()
+{
+	g_bDoublePistolCycle = hCvar_DoublePistolCycle.IntValue > 0;
+	g_bUseIncapCycle = hCvar_UseIncapCycle.IntValue > 0;
+	g_bUseIncapReloadCycle = hCvar_UseIncapReloadCycle.IntValue > 0;
+	g_bCorrectDeploySpeed = hCvar_CorrectDeploySpeed.IntValue > 0;
 	
-	iOffset = GameConfGetOffset(hGamedata, "CTerrorGun::GetRateOfFire");
-	if(iOffset == -1)
-		SetFailState("Unable to get offset for 'CTerrorGun::GetRateOfFire'");
+	if(hCvar_IncapCycle != null)
+	{
+		g_fIncapCycle = hCvar_IncapCycle.FloatValue;
+	}
+	else
+	{
+		g_bUseIncapCycle = false;
+	}
 	
-	hRateOfFire = DHookCreate(iOffset, HookType_Entity, ReturnType_Float, ThisPointer_CBaseEntity, OnGetRateOfFire);
+	if(hCvar_IncapReloadCycle != null)
+	{
+		g_fIncapReloadCycle = hCvar_IncapReloadCycle.FloatValue;
+	}
+	else
+	{
+		g_bUseIncapReloadCycle = false;
+	}
 	
-	iOffset = GameConfGetOffset(hGamedata, "CBaseBeltItem::GetUseTimerDuration");
-	if(iOffset == -1)
-		SetFailState("Unable to get offset for 'CBaseBeltItem::GetUseTimerDuration'");
 	
-	hItemUseDuration = DHookCreate(iOffset, HookType_Entity, ReturnType_Float, ThisPointer_CBaseEntity, OnGetRateOfFire);
-	
-	iOffset = GameConfGetOffset(hGamedata, "CTerrorWeapon::GetDeployDurationModifier");
-	if(iOffset == -1)
-		SetFailState("Unable to get offset for 'CTerrorWeapon::GetDeployDurationModifier'");
-	
-	hDeployModifier = DHookCreate(iOffset, HookType_Entity, ReturnType_Float, ThisPointer_CBaseEntity, OnDeployModifier);
-	
-	iOffset = GameConfGetOffset(hGamedata, "CTerrorWeapon::Deploy");
-	if(iOffset == -1)
-		SetFailState("Unable to get offset for 'CTerrorWeapon::Deploy'");
-	
-	hDeployGun = DHookCreate(iOffset, HookType_Entity, ReturnType_Unknown, ThisPointer_CBaseEntity, OnDeployGun);
-	
-	iOffset = GameConfGetOffset(hGamedata, "CBaseCSGrenade::PrimaryAttack");
-	if(iOffset == -1)
-		SetFailState("Unable to get offset for 'CBaseCSGrenade::PrimaryAttack'");
-	
-	hGrenadePrimaryAttack = DHookCreate(iOffset, HookType_Entity, ReturnType_Void, ThisPointer_CBaseEntity, OnReadyingThrow);
-	
-	iOffset = GameConfGetOffset(hGamedata, "CBaseCSGrenade::StartGrenadeThrow");
-	if(iOffset == -1)
-		SetFailState("Unable to get offset for 'CBaseCSGrenade::StartGrenadeThrow'");
-	
-	hStartThrow = DHookCreate(iOffset, HookType_Entity, ReturnType_Edict, ThisPointer_CBaseEntity, OnStartThrow);
-	
-	Handle hDetour;
-	hDetour = DHookCreateFromConf(hGamedata, "CTerrorMeleeWeapon::StartMeleeSwing");
-	if(!hDetour)
-		SetFailState("Failed to find 'CTerrorMeleeWeapon::StartMeleeSwing' signature");
-	
-	if(!DHookEnableDetour(hDetour, false, OnMeleeSwingPre))
-		SetFailState("Failed to detour 'CTerrorMeleeWeapon::StartMeleeSwing'");
-	
-	if(!DHookEnableDetour(hDetour, true, OnMeleeSwingpPost))
-		SetFailState("Failed to detour 'CTerrorMeleeWeapon::StartMeleeSwing'");
-	
-	delete hGamedata;
 }
 
 public MRESReturn OnMeleeSwingPre(int pThis, Handle hReturn, Handle hParams)
@@ -385,6 +357,12 @@ public MRESReturn OnReloadModifier(int pThis, Handle hReturn)
 	ClampFloatAboveZero(fSpeed);
 	
 	float fReloadSpeed = DHookGetReturn(hReturn);
+	
+	if(g_bUseIncapReloadCycle && GetEntProp(iClient, Prop_Send, "m_isIncapacitated", 1))
+	{
+		fReloadSpeed = g_fIncapReloadCycle;
+	}
+	
 	fReloadSpeed = ClampFloatAboveZero(fReloadSpeed / fSpeed);
 	
 	DHookSetReturn(hReturn, fReloadSpeed);
@@ -414,8 +392,22 @@ public MRESReturn OnGetRateOfFire(int pThis, Handle hReturn)
 	
 	fRateOfFire = DHookGetReturn(hReturn);
 	
-	if(g_iWeaponType[pThis] == L4D2WeaponType_Pistol && GetEntProp(pThis, Prop_Send, "m_isDualWielding"))
-		fRateOfFire = fRateOfFire * 0.5;//double pistol shoots at 2x speed of single instead of valve's 0.075 static rate weapon_pistol.txt firerate changes will scale better.
+	if(g_iWeaponType[pThis] == L4D2WeaponType_Pistol && GetEntProp(pThis, Prop_Send, "m_isDualWielding", 1))
+	{
+		if(g_bDoublePistolCycle)
+		{
+			fRateOfFire = fRateOfFire * 0.5;//double pistol shoots at 2x speed of single instead of valve's 0.075 static rate weapon_pistol.txt firerate changes will scale better.
+		}
+		else
+		{
+			fRateOfFire = 0.075000003;
+		}
+	}
+	
+	if(g_bUseIncapCycle && GetEntProp(iClient, Prop_Send, "m_isIncapacitated", 1))
+	{
+		fRateOfFire = g_fIncapCycle;
+	}
 	
 	fRateOfFire = ClampFloatAboveZero(fRateOfFire / fRateOfFireModifier);
 	
@@ -433,9 +425,8 @@ public MRESReturn OnDeployModifier(int pThis, Handle hReturn)
 	if(iClient < 1)
 		return MRES_Ignored;
 	
-	float fCurrentSpeed = DHookGetReturn(hReturn);
+	float fCurrentSpeed = g_bCorrectDeploySpeed ? DHookGetReturn(hReturn) : 1.0;
 	float fSpeed = 1.0;
-	float fDeploySpeedModifier = fCurrentSpeed;
 	
 	g_fTempSpeed = 1.0 / fCurrentSpeed;
 	
@@ -449,9 +440,7 @@ public MRESReturn OnDeployModifier(int pThis, Handle hReturn)
 	ClampFloatAboveZero(fSpeed);
 	
 	g_fTempSpeed = g_fTempSpeed * fSpeed;
-	fDeploySpeedModifier = ClampFloatAboveZero(fCurrentSpeed / fSpeed);
-	
-	DHookSetReturn(hReturn, fDeploySpeedModifier);
+	DHookSetReturn(hReturn, ClampFloatAboveZero(fCurrentSpeed / fSpeed));
 	return MRES_Override;
 }
 
@@ -562,6 +551,150 @@ L4D2WeaponType GetWeaponTypeFromClassname(const char[] sClassname)
 		return L4D2WeaponType_Unknown;
 	
 	return WeaponType;
+}
+
+void LoadHooksAndPatches()
+{
+	Handle hGamedata = LoadGameConfigFile(GAMEDATA);
+	if(hGamedata == null) 
+		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
+	
+	
+	int iOffset;
+	iOffset = GameConfGetOffset(hGamedata, "CTerrorWeapon::GetReloadDurationModifier");
+	if(iOffset == -1)
+		SetFailState("Unable to get offset for 'CTerrorPlayer::GetReloadDurationModifier'");
+	
+	hReloadModifier = DHookCreate(iOffset, HookType_Entity, ReturnType_Float, ThisPointer_CBaseEntity, OnReloadModifier);
+	
+	iOffset = GameConfGetOffset(hGamedata, "CTerrorGun::GetRateOfFire");
+	if(iOffset == -1)
+		SetFailState("Unable to get offset for 'CTerrorGun::GetRateOfFire'");
+	
+	hRateOfFire = DHookCreate(iOffset, HookType_Entity, ReturnType_Float, ThisPointer_CBaseEntity, OnGetRateOfFire);
+	
+	iOffset = GameConfGetOffset(hGamedata, "CBaseBeltItem::GetUseTimerDuration");
+	if(iOffset == -1)
+		SetFailState("Unable to get offset for 'CBaseBeltItem::GetUseTimerDuration'");
+	
+	hItemUseDuration = DHookCreate(iOffset, HookType_Entity, ReturnType_Float, ThisPointer_CBaseEntity, OnGetRateOfFire);
+	
+	iOffset = GameConfGetOffset(hGamedata, "CTerrorWeapon::GetDeployDurationModifier");
+	if(iOffset == -1)
+		SetFailState("Unable to get offset for 'CTerrorWeapon::GetDeployDurationModifier'");
+	
+	hDeployModifier = DHookCreate(iOffset, HookType_Entity, ReturnType_Float, ThisPointer_CBaseEntity, OnDeployModifier);
+	
+	iOffset = GameConfGetOffset(hGamedata, "CTerrorWeapon::Deploy");
+	if(iOffset == -1)
+		SetFailState("Unable to get offset for 'CTerrorWeapon::Deploy'");
+	
+	hDeployGun = DHookCreate(iOffset, HookType_Entity, ReturnType_Unknown, ThisPointer_CBaseEntity, OnDeployGun);
+	
+	iOffset = GameConfGetOffset(hGamedata, "CBaseCSGrenade::PrimaryAttack");
+	if(iOffset == -1)
+		SetFailState("Unable to get offset for 'CBaseCSGrenade::PrimaryAttack'");
+	
+	hGrenadePrimaryAttack = DHookCreate(iOffset, HookType_Entity, ReturnType_Void, ThisPointer_CBaseEntity, OnReadyingThrow);
+	
+	iOffset = GameConfGetOffset(hGamedata, "CBaseCSGrenade::StartGrenadeThrow");
+	if(iOffset == -1)
+		SetFailState("Unable to get offset for 'CBaseCSGrenade::StartGrenadeThrow'");
+	
+	hStartThrow = DHookCreate(iOffset, HookType_Entity, ReturnType_Edict, ThisPointer_CBaseEntity, OnStartThrow);
+	
+	Handle hDetour;
+	hDetour = DHookCreateFromConf(hGamedata, "CTerrorMeleeWeapon::StartMeleeSwing");
+	if(!hDetour)
+		SetFailState("Failed to find 'CTerrorMeleeWeapon::StartMeleeSwing' signature");
+	
+	if(!DHookEnableDetour(hDetour, false, OnMeleeSwingPre))
+		SetFailState("Failed to detour 'CTerrorMeleeWeapon::StartMeleeSwing'");
+	
+	if(!DHookEnableDetour(hDetour, true, OnMeleeSwingpPost))
+		SetFailState("Failed to detour 'CTerrorMeleeWeapon::StartMeleeSwing'");
+	
+	
+	Address patch = GameConfGetAddress(hGamedata, "CTerrorGun::GetRateOfFire");
+	if(patch)
+	{
+		int offset = GameConfGetOffset(hGamedata, "CTerrorGun::GetRateOfFire_patch");
+		if(offset != -1) 
+		{
+			if(LoadFromAddress(patch + view_as<Address>(offset), NumberType_Int8) == 0x74)
+			{
+				CTerrorGun__GetRateOfFire_byte_address = patch + view_as<Address>(offset);
+				StoreToAddress(CTerrorGun__GetRateOfFire_byte_address, 0xEB, NumberType_Int8);
+				PrintToServer("WeaponHandling CTerrorGun::GetRateOfFire Incap cycle rate patched");
+			}
+			else
+			{
+				LogError("Incorrect offset for 'CTerrorGun::GetRateOfFire_patch'.");
+			}
+		}
+		else
+		{
+			LogError("Invalid offset for 'CTerrorGun::GetRateOfFire_patch'.");
+		}
+	}
+	else
+	{
+		LogError("Error finding the 'CTerrorGun::GetRateOfFire' signature.'");
+	}
+	
+	patch = GameConfGetAddress(hGamedata, "CPistol::GetRateOfFire");
+	if(patch)
+	{
+		int offset = GameConfGetOffset(hGamedata, "CPistol::GetRateOfFire_patch");
+		if(offset != -1) 
+		{
+			if(LoadFromAddress(patch + view_as<Address>(offset), NumberType_Int8) == 0x74)
+			{
+				CPistol__GetRateOfFire_byte_address = patch + view_as<Address>(offset);
+				StoreToAddress(CPistol__GetRateOfFire_byte_address, 0xEB, NumberType_Int8);
+				PrintToServer("WeaponHandling CPistol::GetRateOfFire Incap cycle rate patched");
+			}
+			else
+			{
+				LogError("Incorrect offset for 'CPistol::GetRateOfFire_patch'.");
+			}
+		}
+		else
+		{
+			LogError("Invalid offset for 'CPistol::GetRateOfFire_patch'.");
+		}
+	}
+	else
+	{
+		LogError("Error finding the 'CPistol::GetRateOfFire' signature.'");
+	}
+	
+	delete hGamedata;
+}
+
+public void OnPluginEnd()
+{
+	int byte;
+	
+	if(CPistol__GetRateOfFire_byte_address != Address_Null)
+	{
+		byte = LoadFromAddress(CPistol__GetRateOfFire_byte_address, NumberType_Int8);
+		if(byte == 0xEB)
+		{
+			StoreToAddress(CPistol__GetRateOfFire_byte_address, 0x74, NumberType_Int8);
+			PrintToServer("WeaponHandling restored 'CPistol::GetRateOfFire'");
+		}
+	}	
+	
+	if(CTerrorGun__GetRateOfFire_byte_address != Address_Null)
+	{
+		byte = LoadFromAddress(CTerrorGun__GetRateOfFire_byte_address, NumberType_Int8);
+		if(byte == 0xEB)
+		{
+			StoreToAddress(CTerrorGun__GetRateOfFire_byte_address, 0x74, NumberType_Int8);
+			PrintToServer("WeaponHandling restored 'CTerrorGun::GetRateOfFire'");
+		}
+	}
 }
 
 static float ClampFloatAboveZero(float fSpeed)
