@@ -5,7 +5,7 @@
 
 /*
 *	A typical example of stacking modifiers from different plugins is ->	speedmodifier = speedmodifier * yourmodifier
-*	Example to overwrite modifers placed before ->							speedmodifier = yourmodifier
+*	Example to overwrite modifiers placed before ->							speedmodifier = yourmodifier
 */
 
 enum L4D2WeaponType 
@@ -101,6 +101,8 @@ forward void WH_OnReadyingThrow(int client, int weapon, L4D2WeaponType weapontyp
 forward void WH_OnReloadModifier(int client, int weapon, L4D2WeaponType weapontype, float &speedmodifier);
 
 /*
+*	L4D2 only Affects pills/adrenaline use speed.
+*
 *	@Param	client			Client Index
 *	@Param	weapon			Weapon Index
 *	@Param	weapontype		Weapon Type
@@ -112,7 +114,6 @@ forward void WH_OnGetRateOfFire(int client, int weapon, L4D2WeaponType weapontyp
 
 /*
 *	Does not trigger for chainsaw, gascan, propane, oxygentank, fireworks and gnome.
-*	L4D2 only Affects pills/adrenaline use speed.
 *	
 *	@Param	client			Client Index
 *	@Param	weapon			Weapon Index

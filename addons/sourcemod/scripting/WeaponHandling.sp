@@ -157,7 +157,7 @@ public Plugin myinfo =
 	author = "Lux",
 	description = "Weapon Handling API for guns and melee weapons in left 4 dead",
 	version = PLUGIN_VERSION,
-	url = "-"
+	url = "https://forums.alliedmods.net/showthread.php?p=2674761"
 };
 
 
@@ -171,7 +171,7 @@ public void OnPluginStart()
 	
 	hCvar_UseIncapCycle = CreateConVar("wh_use_incap_cycle_cvar", "1", "1 = (use \"survivor_incapacitated_cycle_time\" for incap shooting cycle rate) 0 = (ignores the cvar and uses weapon_*.txt cycle rates) before being modified", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	
-	hCvar_CorrectDeploySpeed = CreateConVar("wh_deploy_animation_speed", "1", "1 = (match deploy animation speed to the \"DeployDuration\" keyvalue in weapon_*.txt) 0 = (ignore's \"DeployDuration\"keyvalue in weapon_*.txt and matches deploy speed to animation speed) before being modified", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+	hCvar_CorrectDeploySpeed = CreateConVar("wh_deploy_animation_speed", "1", "1 = (match deploy animation speed to the \"DeployDuration\" keyvalue in weapon_*.txt) 0 = (ignore \"DeployDuration\" keyvalue in weapon_*.txt and matches deploy speed to animation speed) before being modified", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	
 	hCvar_IncapCycle = FindConVar("survivor_incapacitated_cycle_time");
 	if(hCvar_IncapCycle == null)
