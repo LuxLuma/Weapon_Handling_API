@@ -32,7 +32,7 @@
 
 #define GAMEDATA "WeaponHandling"
 
-#define PLUGIN_VERSION "1.0"
+#define PLUGIN_VERSION "1.0.1"
 
 enum L4D2WeaponType 
 {
@@ -453,7 +453,10 @@ public void OnEntityCreated(int iEntity, const char[] sClassname)
 		}
 		case L4D2WeaponType_Pills, L4D2WeaponType_Adrenaline:
 		{
-			DHookEntity(hItemUseDuration, true, iEntity);
+			if(g_bIsL4D2)
+			{
+				DHookEntity(hItemUseDuration, true, iEntity);
+			}
 			DHookEntity(hDeployModifier, true, iEntity);
 			DHookEntity(hDeployGun, true, iEntity);
 		}
