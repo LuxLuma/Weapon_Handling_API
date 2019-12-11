@@ -101,8 +101,7 @@ forward void WH_OnReadyingThrow(int client, int weapon, L4D2WeaponType weapontyp
 forward void WH_OnReloadModifier(int client, int weapon, L4D2WeaponType weapontype, float &speedmodifier);
 
 /*
-*	L4D2 only Affects pills/adrenaline use speed.
-*
+*	
 *	@Param	client			Client Index
 *	@Param	weapon			Weapon Index
 *	@Param	weapontype		Weapon Type

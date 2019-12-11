@@ -140,6 +140,16 @@
 				"windows"	"231"
 				"linux"		"232"
 			}
+			"CPainPills::PrimaryAttack"
+			{
+				"windows"	"261"
+				"linux"		"262"
+			}
+			"CPainPills::GetUseTimer"
+			{
+				"windows"	"2136‬"
+				"linux"		"2164‬"
+			}
 			"CTerrorWeapon::GetDeployDurationModifier"
 			{
 				"windows"	"334"

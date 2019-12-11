@@ -32,7 +32,9 @@
 
 #define GAMEDATA "WeaponHandling"
 
-#define PLUGIN_VERSION "1.0.1"
+#define PLUGIN_VERSION "1.0.3"
+
+#define USING_PILLS_ACT 187
 
 enum L4D2WeaponType 
 {
@@ -83,6 +85,7 @@ static L4D2WeaponType g_iWeaponType[2048+1];
 static Handle hReloadModifier;
 static Handle hRateOfFire;
 static Handle hItemUseDuration;
+static Handle hOnPillsUse_L4D1;
 static Handle hDeployModifier;
 static Handle hDeployGun;
 static Handle hGrenadePrimaryAttack;
@@ -111,6 +114,9 @@ static bool g_bCorrectDeploySpeed;
 
 static ConVar hCvar_IncapCycle;
 static float g_fIncapCycle = 0.3;
+
+static bool g_bL4D1IsUsingPills;
+static int g_iPillsUseTimerOffset;
 
 enum MeleeSwingInfo
 {
@@ -396,6 +402,57 @@ public MRESReturn OnGetRateOfFire(int pThis, Handle hReturn)
 	return MRES_Override;
 }
 
+public MRESReturn OnGetRateOfFireL4D1Pills(int pThis)
+{
+	int iClient = GetEntPropEnt(pThis, Prop_Send, "m_hOwnerEntity");
+	if(iClient < 1 || !g_bL4D1IsUsingPills)
+	{
+		g_bL4D1IsUsingPills = false;
+		return MRES_Ignored;
+	}
+	g_bL4D1IsUsingPills = false;
+	
+	float fRateOfFireModifier = 1.0;
+	
+	Call_StartForward(g_hOnGetRateOfFire);
+	Call_PushCell(iClient);
+	Call_PushCell(pThis);
+	Call_PushCell(g_iWeaponType[pThis]);
+	Call_PushFloatRef(fRateOfFireModifier);
+	Call_Finish();
+	
+	ClampFloatAboveZero(fRateOfFireModifier);
+	
+	//g_iPillsUseTimerOffset + 4 = Duration
+	//g_iPillsUseTimerOffset + 8 = TimeStamp
+	Address PillsUseTimerDuration = GetEntityAddress(pThis) + view_as<Address>(g_iPillsUseTimerOffset + 4);
+	Address PillsUseTimerTimeStamp = PillsUseTimerDuration + view_as<Address>(4);
+	
+	float fRateOfFire = view_as<float>(LoadFromAddress(PillsUseTimerDuration, NumberType_Int32));
+	fRateOfFire = ClampFloatAboveZero(fRateOfFire / fRateOfFireModifier);
+	
+	StoreToAddress(PillsUseTimerTimeStamp, view_as<int>(fRateOfFire + GetGameTime()), NumberType_Int32);
+	StoreToAddress(PillsUseTimerDuration, view_as<int>(fRateOfFire), NumberType_Int32);
+	
+	SetEntPropFloat(pThis, Prop_Send, "m_flPlaybackRate", fRateOfFireModifier);
+	return MRES_Ignored;
+}
+// Using CPainPills::SendWeaponAnim way less spammy than CBaseAnimating::SequenceDuration, since other stuff call that altho it would of been simpler to use.
+public MRESReturn OnIsUsingPills(int pThis, Handle hReturn, Handle hParams)
+{
+	int iClient = GetEntPropEnt(pThis, Prop_Send, "m_hOwnerEntity");
+	if(iClient < 1)
+		return MRES_Ignored;
+	
+	int iCurrentAct = DHookGetParam(hParams, 1);
+	if(iCurrentAct != USING_PILLS_ACT || !DHookGetReturn(hReturn))
+		return MRES_Ignored;
+	
+	g_bL4D1IsUsingPills = true;
+	
+	return MRES_Ignored;
+}
+
 public MRESReturn OnDeployModifier(int pThis, Handle hReturn)
 {
 	g_fTempSpeed = 1.0;
@@ -453,10 +510,11 @@ public void OnEntityCreated(int iEntity, const char[] sClassname)
 		}
 		case L4D2WeaponType_Pills, L4D2WeaponType_Adrenaline:
 		{
-			if(g_bIsL4D2)
+			if(!g_bIsL4D2)
 			{
-				DHookEntity(hItemUseDuration, true, iEntity);
+				DHookEntity(hOnPillsUse_L4D1, true, iEntity);
 			}
+			DHookEntity(hItemUseDuration, true, iEntity);
 			DHookEntity(hDeployModifier, true, iEntity);
 			DHookEntity(hDeployGun, true, iEntity);
 		}
@@ -563,6 +621,25 @@ void LoadHooksAndPatches()
 			SetFailState("Unable to get offset for 'CBaseBeltItem::GetUseTimerDuration'");
 		
 		hItemUseDuration = DHookCreate(iOffset, HookType_Entity, ReturnType_Float, ThisPointer_CBaseEntity, OnGetRateOfFire);
+	}
+	else
+	{
+		iOffset = GameConfGetOffset(hGamedata, "CPainPills::SendWeaponAnim");
+		if(iOffset == -1)
+			SetFailState("Unable to get offset for 'CPainPills::SendWeaponAnim'");
+		
+		hOnPillsUse_L4D1 = DHookCreate(iOffset, HookType_Entity, ReturnType_Int, ThisPointer_CBaseEntity, OnIsUsingPills);
+		DHookAddParam(hOnPillsUse_L4D1, HookParamType_Int);
+		
+		iOffset = GameConfGetOffset(hGamedata, "CPainPills::PrimaryAttack");
+		if(iOffset == -1)
+			SetFailState("Unable to get offset for 'CPainPills::PrimaryAttack'");
+		
+		hItemUseDuration = DHookCreate(iOffset, HookType_Entity, ReturnType_Void, ThisPointer_CBaseEntity, OnGetRateOfFireL4D1Pills);
+		
+		g_iPillsUseTimerOffset = GameConfGetOffset(hGamedata, "CPainPills::GetUseTimer");
+		if(iOffset == -1)
+			SetFailState("Unable to get offset for 'CPainPills::GetUseTime'");
 	}
 	
 	iOffset = GameConfGetOffset(hGamedata, "CTerrorWeapon::GetDeployDurationModifier");
