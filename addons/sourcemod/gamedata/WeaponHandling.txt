@@ -148,7 +148,7 @@
 			"CPainPills::GetUseTimer"
 			{
 				"windows"	"2136‬"
-				"linux"		"2164‬"
+				"linux"		"2156‬‬"
 			}
 			"CTerrorWeapon::GetDeployDurationModifier"
 			{
