@@ -32,7 +32,7 @@
 
 #define GAMEDATA "WeaponHandling"
 
-#define PLUGIN_VERSION "1.0.3"
+#define PLUGIN_VERSION "1.0.4"
 
 #define USING_PILLS_ACT 187
 
@@ -78,7 +78,8 @@ enum L4D2WeaponType
 	L4D2WeaponType_JockeyClaw,
 	L4D2WeaponType_SmokerClaw,
 	L4D2WeaponType_SpitterClaw,
-	L4D2WeaponType_TankClaw
+	L4D2WeaponType_TankClaw,
+	L4D2WeaponType_Gnome
 }
 
 static L4D2WeaponType g_iWeaponType[2048+1];
@@ -106,11 +107,11 @@ Handle g_hOnDeployModifier;
 
 static ConVar hCvar_DoublePistolCycle;
 static ConVar hCvar_UseIncapCycle;
-static ConVar hCvar_CorrectDeploySpeed;
+static ConVar hCvar_DeploySetting;
 
 static bool g_bDoublePistolCycle;
 static bool g_bUseIncapCycle;
-static bool g_bCorrectDeploySpeed;
+static int g_iDeploySetting;
 
 static ConVar hCvar_IncapCycle;
 static float g_fIncapCycle = 0.3;
@@ -177,7 +178,7 @@ public void OnPluginStart()
 	
 	hCvar_UseIncapCycle = CreateConVar("wh_use_incap_cycle_cvar", "1", "1 = (use \"survivor_incapacitated_cycle_time\" for incap shooting cycle rate) 0 = (ignores the cvar and uses weapon_*.txt cycle rates) before being modified", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	
-	hCvar_CorrectDeploySpeed = CreateConVar("wh_deploy_animation_speed", "1", "1 = (match deploy animation speed to the \"DeployDuration\" keyvalue in weapon_*.txt) 0 = (ignore \"DeployDuration\" keyvalue in weapon_*.txt and matches deploy speed to animation speed) before being modified", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+	hCvar_DeploySetting = CreateConVar("wh_deploy_animation_speed", "1", "1 = (match deploy animation speed to the \"DeployDuration\" keyvalue in weapon_*.txt) 0 = (ignore \"DeployDuration\" keyvalue in weapon_*.txt and matches deploy speed to animation speed) before being modified -1(do nothing)", FCVAR_NOTIFY, true, -1.0, true, 1.0);
 	
 	hCvar_IncapCycle = FindConVar("survivor_incapacitated_cycle_time");
 	if(hCvar_IncapCycle == null)
@@ -191,7 +192,7 @@ public void OnPluginStart()
 	
 	hCvar_DoublePistolCycle.AddChangeHook(eConvarChanged);
 	hCvar_UseIncapCycle.AddChangeHook(eConvarChanged);
-	hCvar_CorrectDeploySpeed.AddChangeHook(eConvarChanged);
+	hCvar_DeploySetting.AddChangeHook(eConvarChanged);
 	
 	CvarsChanged();
 	AutoExecConfig(true, "WeaponHandling");
@@ -206,7 +207,7 @@ void CvarsChanged()
 {
 	g_bDoublePistolCycle = hCvar_DoublePistolCycle.IntValue > 0;
 	g_bUseIncapCycle = hCvar_UseIncapCycle.IntValue > 0;
-	g_bCorrectDeploySpeed = hCvar_CorrectDeploySpeed.IntValue > 0;
+	g_iDeploySetting = hCvar_DeploySetting.IntValue;
 	
 	if(hCvar_IncapCycle != null)
 	{
@@ -461,10 +462,20 @@ public MRESReturn OnDeployModifier(int pThis, Handle hReturn)
 	if(iClient < 1)
 		return MRES_Ignored;
 	
-	float fCurrentSpeed = g_bCorrectDeploySpeed ? DHookGetReturn(hReturn) : 1.0;
+	float fCurrentSpeed = DHookGetReturn(hReturn);
 	float fSpeed = 1.0;
 	
-	g_fTempSpeed = 1.0 / fCurrentSpeed;
+	switch(g_iDeploySetting)
+	{
+		case 0:
+		{
+			fCurrentSpeed = 1.0;
+		}
+		case 1:
+		{
+			g_fTempSpeed = 1.0 / fCurrentSpeed;
+		}
+	}
 	
 	Call_StartForward(g_hOnDeployModifier);
 	Call_PushCell(iClient);
@@ -576,6 +587,7 @@ StringMap CreateWeaponClassnameHashMap(StringMap hWeaponClassnameHashMap)
 	hWeaponClassnameHashMap.SetValue("weapon_smoker_claw", L4D2WeaponType_SmokerClaw);
 	hWeaponClassnameHashMap.SetValue("weapon_spitter_claw", L4D2WeaponType_SpitterClaw);
 	hWeaponClassnameHashMap.SetValue("weapon_tank_claw", L4D2WeaponType_TankClaw);
+	hWeaponClassnameHashMap.SetValue("weapon_gnome", L4D2WeaponType_Gnome);
 	return hWeaponClassnameHashMap;
 }
 

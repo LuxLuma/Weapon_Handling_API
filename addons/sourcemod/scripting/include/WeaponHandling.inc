@@ -50,7 +50,8 @@ enum L4D2WeaponType
 	L4D2WeaponType_JockeyClaw,
 	L4D2WeaponType_SmokerClaw,
 	L4D2WeaponType_SpitterClaw,
-	L4D2WeaponType_TankClaw
+	L4D2WeaponType_TankClaw,
+	L4D2WeaponType_Gnome
 }
 
 /*
@@ -166,6 +167,7 @@ stock StringMap CreateWeaponClassnameHashMap(StringMap hWeaponClassnameHashMap)
 	hWeaponClassnameHashMap.SetValue("weapon_smoker_claw", L4D2WeaponType_SmokerClaw);
 	hWeaponClassnameHashMap.SetValue("weapon_spitter_claw", L4D2WeaponType_SpitterClaw);
 	hWeaponClassnameHashMap.SetValue("weapon_tank_claw", L4D2WeaponType_TankClaw);
+	hWeaponClassnameHashMap.SetValue("weapon_gnome", L4D2WeaponType_Gnome);
 	return hWeaponClassnameHashMap;
 }
 
