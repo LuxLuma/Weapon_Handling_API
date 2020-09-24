@@ -6,38 +6,38 @@
 		{
 			"CTerrorWeapon::GetReloadDurationModifier"
 			{
-				"windows"	"357"
-				"linux"		"358"
+				"windows"	"358"
+				"linux"		"359"
 			}
 			"CTerrorGun::GetRateOfFire"
 			{
-				"windows"	"451"
-				"linux"		"453"
+				"windows"	"452"
+				"linux"		"454"
 			}
 			"CBaseBeltItem::GetUseTimerDuration"
 			{
-				"windows"	"447"
-				"linux"		"449"
+				"windows"	"448"
+				"linux"		"450"
 			}
 			"CTerrorWeapon::GetDeployDurationModifier"
 			{
 				"windows"	"358"
-				"linux"		"359"
+				"linux"		"360"
 			}
 			"CTerrorWeapon::Deploy"
 			{
-				"windows"	"263"
-				"linux"		"264"
+				"windows"	"264"
+				"linux"		"265"
 			}
 			"CBaseCSGrenade::PrimaryAttack"
 			{
-				"windows"	"281"
-				"linux"		"282"
+				"windows"	"282"
+				"linux"		"283"
 			}
 			"CBaseCSGrenade::StartGrenadeThrow"
 			{
-				"windows"	"447"
-				"linux"		"449"
+				"windows"	"448"
+				"linux"		"450"
 			}
 			"CTerrorGun::GetRateOfFire_patch"
 			{
@@ -109,8 +109,8 @@
 			{
 				"library"		"server"
 				"linux"			"@_ZNK7CPistol13GetRateOfFireEv"
-				"windows"		"\x56\x8B\xF1\x8B\x06\x8B\x90\x6C\x06\x00\x00\xFF\xD2\x8B\xCE\x84\xC0\x74\x2A\xE8\x2A\x2A\x2A\x2A\x85\xC0"
-								/* 56 8B F1 8B 06 8B 90 6C 06 00 00 FF D2 8B CE 84 C0 74 ? E8 ? ? ? ? 85 C0 */
+				"windows"		"\x56\x8B\xF1\x8B\x06\x8B\x90\x70\x06\x00\x00\xFF\xD2\x8B\xCE\x84\xC0\x74\x2A\xE8\x2A\x2A\x2A\x2A\x85\xC0"
+								/* 56 8B F1 8B 06 8B 90 70 06 00 00 FF D2 8B CE 84 C0 74 ? E8 ? ? ? ? 85 C0 */
 			}
 			"CTerrorMeleeWeapon::StartMeleeSwing"
 			{
