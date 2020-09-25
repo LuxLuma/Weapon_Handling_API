@@ -21,7 +21,7 @@
 			}
 			"CTerrorWeapon::GetDeployDurationModifier"
 			{
-				"windows"	"358"
+				"windows"	"359"
 				"linux"		"360"
 			}
 			"CTerrorWeapon::Deploy"
