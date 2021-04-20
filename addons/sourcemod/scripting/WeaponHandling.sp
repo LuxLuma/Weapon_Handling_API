@@ -32,9 +32,16 @@
 
 #define GAMEDATA "WeaponHandling"
 
-#define PLUGIN_VERSION "1.0.4"
+#define PLUGIN_VERSION "1.0.5"
 
 #define USING_PILLS_ACT 187
+
+#define DESERT_BURST_INTERVAL 0.35
+#define DESERT_BURST_OFFSET_2 0
+#define DESERT_BURST_OFFSET_3 4
+#define DESERT_BURST_OFFSET_END 8
+static int g_DesertBurstOffset = -1;
+static float g_fBurstEndTime[MAXPLAYERS+1];
 
 enum L4D2WeaponType 
 {
@@ -91,6 +98,7 @@ static Handle hDeployModifier;
 static Handle hDeployGun;
 static Handle hGrenadePrimaryAttack;
 static Handle hStartThrow;
+static Handle hDesertBurstFire;
 
 static Address CTerrorGun__GetRateOfFire_byte_address;
 static Address CPistol__GetRateOfFire_byte_address;
@@ -242,7 +250,7 @@ public MRESReturn OnMeleeSwingpPost()
 	Call_PushFloatRef(fSpeed);
 	Call_Finish();
 	
-	ClampFloatAboveZero(fSpeed);
+	fSpeed = ClampFloatAboveZero(fSpeed);
 	
 	float flGameTime;
 	float flNextTimeCalc;
@@ -281,7 +289,7 @@ public MRESReturn OnStartThrow(int pThis, Handle hReturn)
 	Call_PushFloatRef(fSpeed);
 	Call_Finish();
 	
-	ClampFloatAboveZero(fSpeed);
+	fSpeed = ClampFloatAboveZero(fSpeed);
 	
 	float flGameTime;
 	float flNextTimeCalc;
@@ -315,7 +323,7 @@ public MRESReturn OnReadyingThrow(int pThis)
 	Call_PushFloatRef(fSpeed);
 	Call_Finish();
 	
-	ClampFloatAboveZero(fSpeed);
+	fSpeed = ClampFloatAboveZero(fSpeed);
 	
 	//credit timocop
 	static float flGameTime;
@@ -345,10 +353,7 @@ public MRESReturn OnReloadModifier(int pThis, Handle hReturn)
 	Call_PushFloatRef(fSpeed);
 	Call_Finish();
 	
-	ClampFloatAboveZero(fSpeed);
-	
 	float fReloadSpeed = DHookGetReturn(hReturn);
-	
 	fReloadSpeed = ClampFloatAboveZero(fReloadSpeed / fSpeed);
 	
 	DHookSetReturn(hReturn, fReloadSpeed);
@@ -364,8 +369,9 @@ public MRESReturn OnGetRateOfFire(int pThis, Handle hReturn)
 	iClient = GetEntPropEnt(pThis, Prop_Send, "m_hOwnerEntity");
 	if(iClient < 1)
 		return MRES_Ignored;
-	
+		
 	fRateOfFireModifier = 1.0;
+	fRateOfFire = DHookGetReturn(hReturn);
 	
 	Call_StartForward(g_hOnGetRateOfFire);
 	Call_PushCell(iClient);
@@ -373,10 +379,6 @@ public MRESReturn OnGetRateOfFire(int pThis, Handle hReturn)
 	Call_PushCell(g_iWeaponType[pThis]);
 	Call_PushFloatRef(fRateOfFireModifier);
 	Call_Finish();
-	
-	ClampFloatAboveZero(fRateOfFireModifier);
-	
-	fRateOfFire = DHookGetReturn(hReturn);
 	
 	if(g_iWeaponType[pThis] == L4D2WeaponType_Pistol && GetEntProp(pThis, Prop_Send, "m_isDualWielding", 1))
 	{
@@ -397,10 +399,27 @@ public MRESReturn OnGetRateOfFire(int pThis, Handle hReturn)
 	
 	fRateOfFire = ClampFloatAboveZero(fRateOfFire / fRateOfFireModifier);
 	
+	if(g_iWeaponType[pThis] == L4D2WeaponType_RifleDesert)
+	{
+		g_fBurstEndTime[iClient] = GetGameTime() + ClampFloatAboveZero(DESERT_BURST_INTERVAL / fRateOfFireModifier);
+	}
+	
 	DHookSetReturn(hReturn, fRateOfFire);
 	SetEntPropFloat(pThis, Prop_Send, "m_flPlaybackRate", fRateOfFireModifier);
 	
 	return MRES_Override;
+}
+
+//call order hack
+public MRESReturn OnGetRateOfFireBurst(int pThis, Handle hReturn)
+{
+	static int iClient;
+	iClient = GetEntPropEnt(pThis, Prop_Send, "m_hOwnerEntity");
+	if(iClient < 1)
+		return MRES_Ignored;
+
+	SetEntDataFloat(pThis, g_DesertBurstOffset + DESERT_BURST_OFFSET_END, g_fBurstEndTime[iClient]);
+	return MRES_Ignored;
 }
 
 public MRESReturn OnGetRateOfFireL4D1Pills(int pThis)
@@ -421,8 +440,6 @@ public MRESReturn OnGetRateOfFireL4D1Pills(int pThis)
 	Call_PushCell(g_iWeaponType[pThis]);
 	Call_PushFloatRef(fRateOfFireModifier);
 	Call_Finish();
-	
-	ClampFloatAboveZero(fRateOfFireModifier);
 	
 	//g_iPillsUseTimerOffset + 4 = Duration
 	//g_iPillsUseTimerOffset + 8 = TimeStamp
@@ -484,8 +501,7 @@ public MRESReturn OnDeployModifier(int pThis, Handle hReturn)
 	Call_PushFloatRef(fSpeed);
 	Call_Finish();
 	
-	ClampFloatAboveZero(fSpeed);
-	
+	fSpeed = ClampFloatAboveZero(fSpeed);
 	g_fTempSpeed = g_fTempSpeed * fSpeed;
 	DHookSetReturn(hReturn, ClampFloatAboveZero(fCurrentSpeed / fSpeed));
 	return MRES_Override;
@@ -509,7 +525,7 @@ public void OnEntityCreated(int iEntity, const char[] sClassname)
 		case L4D2WeaponType_AutoshotgunSpas, L4D2WeaponType_PumpshotgunChrome, 
 			L4D2WeaponType_Autoshotgun, L4D2WeaponType_Pumpshotgun, L4D2WeaponType_GrenadeLauncher, 
 			L4D2WeaponType_HuntingRifle, L4D2WeaponType_Magnum, L4D2WeaponType_Rifle, 
-			L4D2WeaponType_RifleDesert, L4D2WeaponType_SMG, L4D2WeaponType_RifleSg552,
+			L4D2WeaponType_SMG, L4D2WeaponType_RifleSg552,
 			L4D2WeaponType_Pistol, L4D2WeaponType_RifleAk47, L4D2WeaponType_SMGMp5, 
 			L4D2WeaponType_SMGSilenced, L4D2WeaponType_SniperAwp, L4D2WeaponType_SniperMilitary, 
 			L4D2WeaponType_SniperScout, L4D2WeaponType_RifleM60:
@@ -518,6 +534,14 @@ public void OnEntityCreated(int iEntity, const char[] sClassname)
 			DHookEntity(hRateOfFire, true, iEntity);
 			DHookEntity(hDeployModifier, true, iEntity);
 			DHookEntity(hDeployGun, true, iEntity);
+		}
+		case L4D2WeaponType_RifleDesert:
+		{
+			DHookEntity(hReloadModifier, true, iEntity);
+			DHookEntity(hRateOfFire, true, iEntity);
+			DHookEntity(hDeployModifier, true, iEntity);
+			DHookEntity(hDeployGun, true, iEntity);
+			DHookEntity(hDesertBurstFire, true, iEntity);
 		}
 		case L4D2WeaponType_Pills, L4D2WeaponType_Adrenaline:
 		{
@@ -633,6 +657,16 @@ void LoadHooksAndPatches()
 			SetFailState("Unable to get offset for 'CBaseBeltItem::GetUseTimerDuration'");
 		
 		hItemUseDuration = DHookCreate(iOffset, HookType_Entity, ReturnType_Float, ThisPointer_CBaseEntity, OnGetRateOfFire);
+		
+		iOffset = GameConfGetOffset(hGamedata, "CRifle_Desert::PrimaryAttack");
+		if(iOffset == -1)
+			SetFailState("Unable to get offset for 'CRifle_Desert::PrimaryAttack'");
+		
+		hDesertBurstFire = DHookCreate(iOffset, HookType_Entity, ReturnType_Void, ThisPointer_CBaseEntity, OnGetRateOfFireBurst);
+		
+		g_DesertBurstOffset = GameConfGetOffset(hGamedata, "CRifle_Desert::BurstTimes_StartOffset");
+		if(iOffset == -1)
+			SetFailState("Unable to get offset for 'CRifle_Desert::BurstTimes_StartOffset'");
 	}
 	else
 	{
