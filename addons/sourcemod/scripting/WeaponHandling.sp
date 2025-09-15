@@ -122,8 +122,10 @@ static bool g_bDoublePistolCycle;
 static bool g_bUseIncapCycle;
 static int g_iDeploySetting;
 
+#define RATELIMITING_GRACE 0.1
 static ConVar hCvar_IncapCycle;
 static float g_fIncapCycle = 0.3;
+static float g_flIncapCycleRate_client[MAXPLAYERS+1];
 
 static bool g_bL4D1IsUsingPills;
 static int g_iPillsUseTimerOffset;
@@ -226,6 +228,9 @@ void CvarsChanged()
 	{
 		g_bUseIncapCycle = false;
 	}
+	
+	for(int i = 1; i<=MAXPLAYERS; ++i)
+		g_flIncapCycleRate_client[i] = -1.0;
 }
 
 public MRESReturn OnMeleeSwingPre(int pThis, Handle hReturn, Handle hParams)
@@ -389,7 +394,7 @@ public MRESReturn OnGetRateOfFire(int pThis, Handle hReturn)
 		}
 		else
 		{
-			fRateOfFire = 0.075000003;
+			fRateOfFire = 0.075000003;// hardcoded double pistol firerate
 		}
 	}
 	
@@ -407,6 +412,29 @@ public MRESReturn OnGetRateOfFire(int pThis, Handle hReturn)
 	
 	DHookSetReturn(hReturn, fRateOfFire);
 	SetEntPropFloat(pThis, Prop_Send, "m_flPlaybackRate", fRateOfFireModifier);
+	
+	if(IsFakeClient(iClient))
+		return MRES_Override;
+	
+	switch(FloatCompare(g_flIncapCycleRate_client[iClient], fRateOfFire))
+	{
+		case 1, -1:
+		{
+			static char rateString[32];
+			static float flRateLimit[MAXPLAYERS+1];
+			float flEngineTime = GetEngineTime();
+			
+			if(flEngineTime < flRateLimit[iClient])
+				return MRES_Override;
+			
+			flRateLimit[iClient] = flEngineTime + RATELIMITING_GRACE;
+			g_flIncapCycleRate_client[iClient] = fRateOfFire;
+			FloatToString(fRateOfFire, rateString, sizeof(rateString));
+			SendConVarValue(iClient, hCvar_IncapCycle, rateString);
+			
+		}
+	}
+	
 	
 	return MRES_Override;
 }
