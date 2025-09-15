@@ -32,7 +32,7 @@
 
 #define GAMEDATA "WeaponHandling"
 
-#define PLUGIN_VERSION "1.0.6"
+#define PLUGIN_VERSION "1.0.7"
 
 #define USING_PILLS_ACT 187
 
