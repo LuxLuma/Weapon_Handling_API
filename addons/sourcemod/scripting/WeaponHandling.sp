@@ -706,7 +706,7 @@ void LoadHooksAndPatches()
 		hDesertBurstFire = DHookCreate(iOffset, HookType_Entity, ReturnType_Void, ThisPointer_CBaseEntity, OnGetRateOfFireBurst);
 		
 		g_DesertBurstOffset = GameConfGetOffset(hGamedata, "CRifle_Desert::BurstTimes_StartOffset");
-		if(iOffset == -1)
+		if(g_DesertBurstOffset == -1)
 			SetFailState("Unable to get offset for 'CRifle_Desert::BurstTimes_StartOffset'");
 	}
 	else
@@ -725,7 +725,7 @@ void LoadHooksAndPatches()
 		hItemUseDuration = DHookCreate(iOffset, HookType_Entity, ReturnType_Void, ThisPointer_CBaseEntity, OnGetRateOfFireL4D1Pills);
 		
 		g_iPillsUseTimerOffset = GameConfGetOffset(hGamedata, "CPainPills::GetUseTimer");
-		if(iOffset == -1)
+		if(g_iPillsUseTimerOffset == -1)
 			SetFailState("Unable to get offset for 'CPainPills::GetUseTime'");
 	}
 	
