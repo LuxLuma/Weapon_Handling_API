@@ -178,11 +178,11 @@ stock L4D2WeaponType GetWeaponTypeFromClassname(const char[] sClassname)
 	if(hWeaponClassnameHashMap == INVALID_HANDLE)
 		hWeaponClassnameHashMap = CreateWeaponClassnameHashMap(hWeaponClassnameHashMap);
 	
-	static L4D2WeaponType WeaponType;
-	if(!hWeaponClassnameHashMap.GetValue(sClassname, WeaponType))
+	static L4D2WeaponType _WeaponType;
+	if(!hWeaponClassnameHashMap.GetValue(sClassname, _WeaponType))
 		return L4D2WeaponType_Unknown;
 	
-	return WeaponType;
+	return _WeaponType;
 }
 
 
